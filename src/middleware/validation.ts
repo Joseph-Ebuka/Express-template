@@ -27,7 +27,11 @@ export const validateQuery = (schema: z.ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
       const validated = schema.parse(req.query);
-      req.query = validated as any;
+      // Clear and update req.query instead of replacing it
+      for (const key in req.query) {
+        delete (req.query as any)[key];
+      }
+      Object.assign(req.query, validated);
       next();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -47,7 +51,11 @@ export const validateParams = (schema: z.ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
       const validated = schema.parse(req.params);
-      req.params = validated as any;
+      // Clear and update req.params instead of replacing it
+      for (const key in req.params) {
+        delete (req.params as any)[key];
+      }
+      Object.assign(req.params, validated);
       next();
     } catch (error) {
       if (error instanceof ZodError) {

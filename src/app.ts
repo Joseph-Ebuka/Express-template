@@ -4,7 +4,7 @@ import cors from 'cors';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import mongoSanitize from 'express-mongo-sanitize';
+import { mongoSanitize } from './middleware/sanitization';
 
 import config from './config';
 import routes from './routes';
