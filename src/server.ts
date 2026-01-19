@@ -2,13 +2,15 @@ import { createApp } from './app';
 import config from './config';
 import logger from './config/logger';
 import { connectDatabase, disconnectDatabase } from './config/database';
+import { connectRedis, disconnectRedis } from './config/redis';
 
 async function startServer(): Promise<void> {
   try {
     // Connect to database
     await connectDatabase();
-    logger.info('Database connected successfully');
-
+    // Connect to Redis
+    await connectRedis();
+    
     // Create Express app
     const app = createApp();
 
@@ -25,7 +27,11 @@ async function startServer(): Promise<void> {
         logger.info('HTTP server closed');
       });
 
-      await disconnectDatabase();
+      await Promise.all([
+        disconnectDatabase(),
+        disconnectRedis()
+      ]);
+      
       process.exit(0);
     };
 
