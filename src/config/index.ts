@@ -4,7 +4,7 @@ import path from "path";
 dotenv.config({
   path: path.resolve(
     __dirname,
-    `../../.env.${process.env.NODE_ENV || "development"}`,
+    `../../.env.${process.env.NODE_ENV || "example"}`,
   ),
 });
 

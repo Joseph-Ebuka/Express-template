@@ -16,7 +16,7 @@ export function createApp(): Application {
 
   // Middlewares
   app.use(helmet());
-  app.use(cors(config.cors));
+  // app.use(cors(config.cors));
   app.use(compression());
   app.use(mongoSanitize());
   app.use(express.json({ limit: "10mb" }));
