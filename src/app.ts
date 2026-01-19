@@ -1,52 +1,68 @@
-import express, { Application, Request, Response } from "express";
-import helmet from "helmet";
-import cors from "cors";
-import compression from "compression";
-import morgan from "morgan";
-import rateLimit from "express-rate-limit";
-import mongoSanitize from "express-mongo-sanitize";
+import express, { Application, Request, Response } from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import compression from 'compression';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
 
-import config from "./config";
-import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
-import { timeStamp } from "console";
-import { uptime } from "process";
+import config from './config';
+import routes from './routes';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import logger from './config/logger';
 
 export function createApp(): Application {
-  const app: Application = express();
+  const app = express();
 
-  // Middlewares
+  // Security middleware
   app.use(helmet());
-  // app.use(cors(config.cors));
-  app.use(compression());
-  app.use(mongoSanitize());
-  app.use(express.json({ limit: "10mb" }));
-  app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+  app.use(cors(config.cors));
 
-  if (config.env === "development") {
-    app.use(morgan("dev"));
+  // Body parsing
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Compression
+  app.use(compression());
+
+  // Data sanitization
+  app.use(mongoSanitize());
+
+  // Request logging
+  if (config.env === 'development') {
+    app.use(morgan('dev'));
+  } else {
+    app.use(morgan('combined', {
+      stream: {
+        write: (message: string) => logger.info(message.trim())
+      }
+    }));
   }
 
+  // Rate limiting
   const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
-    message: "Too many requests from this IP, please try again later.",
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: 'Too many requests from this IP',
+    standardHeaders: true,
+    legacyHeaders: false,
   });
-  app.use("/api", limiter);
 
-  app.get("/health", (req: Request, res: Response) => {
+  app.use('/api/', limiter);
+
+  // Health check
+  app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({
-      status: "OK",
-      timeStamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      message: "Server is up and running",
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
     });
   });
 
-  // Routes will be added here
-  // app.use('/api/v1', routes);
+  // API routes
+  app.use('/api/v1', routes);
 
+  // Error handlers
   app.use(notFoundHandler);
   app.use(errorHandler);
 

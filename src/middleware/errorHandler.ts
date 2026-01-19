@@ -1,46 +1,54 @@
-import type { Request, Response, NextFunction } from "express";
-import { AppError } from "../utils/errors";
+import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../utils/errors';
+import logger from '../config/logger';
 
 export const errorHandler = (
-  err: Error,
+  err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void => {
   let error = err;
+
   if (!(error instanceof AppError)) {
-    error = new AppError("Internal Server Error", 500);
+    error = new AppError(
+      err.message || 'Internal server error',
+      500,
+      undefined,
+      false
+    );
   }
 
   const appError = error as AppError;
+
+  logger.error({
+    message: appError.message,
+    statusCode: appError.statusCode,
+    stack: appError.stack,
+    url: req.url,
+    method: req.method
+  });
+
   res.status(appError.statusCode).json({
-    status: "error",
+    status: 'error',
     message: appError.message,
     ...(appError.details && { details: appError.details }),
-    ...(process.env.NODE_ENV === "development" && { stack: appError.stack }),
+    ...(process.env.NODE_ENV === 'development' && {
+      stack: appError.stack
+    })
   });
 };
 
 export const notFoundHandler = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void => {
-  const error = new AppError("Not Found", 404);
-  next(error);
-};
-
-export const unauthorizedHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void => {
-  const error = new AppError("Unauthorized", 401);
-  next(error);
+  next(new AppError(`Route ${req.originalUrl} not found`, 404));
 };
 
 export const catchAsync = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>,
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
 ) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     fn(req, res, next).catch(next);
